@@ -13,7 +13,7 @@
       <nav class="navbar navbar-dark bg-dark d-flex justify-content-center">
         <div class="filter-completed-all btn-group btn-group-toggle">
           <label
-            v-for="option in filterOptions"
+            v-for="option in filters"
             class="btn btn-light"
             :key="option"
             :class="{ active: status === option }"
@@ -33,7 +33,7 @@
         class="success-message position-fixed"
         :show="dismissCountDown"
         dismissible
-        :variant="message.success ? 'success' : 'danger'"
+        :variant="messageType"
         @dismissed="dismissCountDown = 0"
         @dismiss-count-down="countDownChanged"
       >
@@ -75,7 +75,7 @@
       <b-pagination
         class="custom-pagination"
         v-model="currentPage"
-        :total-rows="filteredList.length ? filteredList.length : 1"
+        :total-rows="totalRows"
       >
       </b-pagination>
     </footer>
@@ -83,49 +83,22 @@
 </template>
 
 <script>
-import _isEqual from 'lodash/isEqual';
 import _capitalize from 'lodash/capitalize';
-const BASE_URL = 'https://jsonplaceholder.typicode.com/todos';
-const MESSAGES = {
-  SUCCESS_DELETE: {
-    text: 'Item was successfully deleted',
-    success: true,
-  },
-  SUCCESS_ADD: {
-    text: 'Item was successfully added',
-    success: true,
-  },
-  SUCCESS_COMPLETE: {
-    text: 'Item was successfully completed',
-    success: true,
-  },
-  FAILED_COMPLETE: {
-    text: 'Item wasn`t completed',
-    success: false,
-  },
-  FAILED_DELETE: {
-    text: 'Item wasn`t deleteded',
-    sucess: false,
-  },
-  FAILED_ADD: {
-    text: 'Item wasn`t added',
-    success: false,
-  },
-};
+import { MESSAGES, FILTER_OPTIONS } from './constants/constants'
+import apiCalls from './API/apiCalls'
+
 
 export default {
   name: 'App',
   data: () => ({
     status: 'all',
-    filterOptions: ['all', 'completed', 'not completed'],
+    filterOptions: FILTER_OPTIONS,
     newItemText: '',
     list: [],
     dismissSecs: 3,
     dismissCountDown: 0,
     showDismissibleAlert: false,
     currentPage: 1,
-    paginatedList: [],
-    filteredList: [],
     searchText: '',
     message: {},
     loading: true,
@@ -135,80 +108,23 @@ export default {
       this.newItemText = '';
     },
     onModalOk() {
-      const item = {
-        userId: 1,
-        title: this.newItemText,
-        completed: false,
-      };
-      const options = {
-        headers: {
-          'Content-Type': 'application/json; charset=utf-8',
-        },
-        method: 'POST',
-        body: JSON.stringify(item),
-      };
       this.loading = true;
-
-      fetch(BASE_URL, options)
-        .then((res) => res.json())
-        .then((res) => {
+      apiCalls.postItem(this.newItemText).then((res) => {
           if (res) {
             this.newItemText = '';
             this.list = [...this.list, res];
-            this.showAlert('SUCCESS_ADD');
+            this.showAlert(MESSAGES.SUCCESS_ADD);
           }
         })
-        .catch(() => this.showAlert('FAILED_ADD'));
+        .catch(() => this.showAlert(MESSAGES.FAILED_ADD));
     },
     countDownChanged(dismissCountDown) {
       this.dismissCountDown = dismissCountDown;
     },
-    showAlert(text) {
+    showAlert(message) {
       this.loading = false;
-      this.message = MESSAGES[text];
+      this.message = message;
       this.dismissCountDown = this.dismissSecs;
-    },
-    filterList() {
-      switch (this.status) {
-        case 'completed':
-          this.filteredList = this.list.filter((item) => {
-            if (this.searchText && this.matchSearch(item.title) && item.completed) {
-              return item;
-            } else if (!this.searchText && item.completed) {
-              return item;
-            }
-          });
-          break;
-        case 'not completed':
-          this.filteredList = this.list.filter((item) => {
-            if (this.searchText && this.matchSearch(item.title) && !item.compared) {
-              return item;
-            } else if (!this.searchText && !item.completed) {
-              return item;
-            }
-          });
-          break;
-        case 'all':
-          this.filteredList = this.list.filter((item) => {
-            if (this.searchText && this.matchSearch(item.title)) {
-              return item;
-            } else if (!this.searchText) {
-              return item;
-            }
-          });
-          break;
-      }
-    },
-
-    setPagenatedList() {
-      if (this.currentPage) {
-        const itemCount = (this.currentPage - 1) * 12;
-        this.paginatedList = this.filteredList.filter((item, i) => {
-          if (i + 1 > itemCount && i + 1 <= itemCount + 12) {
-            return item;
-          }
-        });
-      }
     },
 
     matchSearch(text) {
@@ -218,14 +134,7 @@ export default {
 
     onDeleteItem(item) {
       this.loading = true;
-      const options = {
-        headers: {
-          'Content-Type': 'application/json; charset=utf-8',
-        },
-        method: 'DELETE',
-      };
-      fetch(`${BASE_URL}/${item.id}`, options)
-        .then((res) => res.json())
+      apiCalls.deleteItem(item.id)
         .then((res) => {
           if (res) {
             this.list = this.list.reduce((acc, itemList) => {
@@ -234,24 +143,16 @@ export default {
               }
               return acc;
             }, []);
-            this.showAlert('SUCCESS_DELETE');
+            this.showAlert(MESSAGES.SUCCESS_DELETE);
           }
         })
-        .catch(() => this.showAlert('FAILED_DELETE'));
+        .catch(() => this.showAlert(MESSAGES.FAILED_DELETE));
     },
 
     onChangeCompleted(item) {
       this.loading = true;
       item.completed = !item.completed;
-      const options = {
-        headers: {
-          'Content-Type': 'application/json; charset=utf-8',
-        },
-        method: 'PUT',
-        body: JSON.stringify(item),
-      };
-      fetch(`${BASE_URL}/${item.id}`, options)
-        .then((res) => res.json())
+      apiCalls.putItem(item)
         .then((res) => {
           if (res) {
             this.list = this.list.map((listItem) => {
@@ -260,11 +161,69 @@ export default {
               }
               return listItem;
             });
-            this.showAlert('SUCCESS_COMPLETE');
+            this.showAlert(MESSAGES.SUCCESS_COMPLETE);
           }
         })
-        .catch(() => this.showAlert('FAILED_COMPLETE'));
+        .catch(() => this.showAlert(MESSAGES.FAILED_COMPLETE));
     },
+  },
+  computed: {
+    filters() {
+      return Object.values(this.filterOptions);
+    },
+    filteredList() {
+      let filteredList = [];
+      switch (this.status) {
+        case FILTER_OPTIONS.COMPLETED:
+          filteredList = this.list.filter((item) => {
+            if (this.searchText && this.matchSearch(item.title) && item.completed) {
+              return item;
+            } else if (!this.searchText && item.completed) {
+              return item;
+            }
+          });
+          break;
+        case FILTER_OPTIONS.NOT_COMPLETED:
+          filteredList = this.list.filter((item) => {
+            if (this.searchText && this.matchSearch(item.title) && !item.compared) {
+              return item;
+            } else if (!this.searchText && !item.completed) {
+              return item;
+            }
+          });
+          break;
+        case FILTER_OPTIONS.ALL:
+          filteredList = this.list.filter((item) => {
+            if (this.searchText && this.matchSearch(item.title)) {
+              return item;
+            } else if (!this.searchText) {
+              return item;
+            }
+          });
+          break;
+      }
+      return filteredList;
+    },
+    totalRows() {
+      return this.filteredList.length || 1;
+    },
+    paginatedList() {
+      let paginatedList = [];
+
+      if (this.currentPage) {
+        const itemCount = (this.currentPage - 1) * 12;
+        paginatedList = this.filteredList.filter((item, i) => {
+          if (i + 1 > itemCount && i + 1 <= itemCount + 12) {
+            return item;
+          }
+        });
+      }
+
+      return paginatedList;
+    },
+    messageType() {
+      return this.message.success ? 'success' : 'danger';
+    }
   },
   filters: {
     capitalize(val) {
@@ -276,31 +235,15 @@ export default {
   },
 
   mounted() {
-    fetch(BASE_URL)
-      .then((res) => res.json())
+    apiCalls.getItems()
       .then((data) => {
         this.loading = false;
         this.list = data;
       });
   },
   watch: {
-    list: function(val, oldVal) {
-      if (!_isEqual(val, oldVal)) {
-        this.filterList();
-      }
-    },
-    filteredList: function() {
-      this.setPagenatedList();
-    },
     status: function() {
       this.currentPage = 1;
-      this.filterList();
-    },
-    currentPage: function() {
-      this.setPagenatedList();
-    },
-    searchText: function() {
-      this.filterList();
     },
   },
 };
@@ -366,5 +309,14 @@ main {
   height: 100vh;
   display: flex;
   align-items: center;
+  width: 100%;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+}
+
+.spinner .spinner-border {
+  width: 5rem;
+  height: 5rem;
 }
 </style>
