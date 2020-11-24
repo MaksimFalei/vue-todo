@@ -10,7 +10,7 @@
       type="radio"
       name="options"
       :value="option"
-      @input="onUpdate"
+      @input="$emit('input', option)"
       />
       {{ option | capitalize }}
     </label>
@@ -23,12 +23,6 @@ export default {
   props: {
     filters: Array,
     status: String,
-  },
-  methods: {
-    onUpdate(event) {
-      const newValue = event.target.value;
-      this.$emit('update:status', newValue);
-    }
   },
 };
 </script>

@@ -2,7 +2,7 @@
   <div>
     <slot></slot>
     <div class="d-flex row w-100 m-auto justify-content-center fixed-bottom">
-      <b-pagination class="custom-pagination" :total-rows="totalRows" :value="page" @input="onUpdate">
+      <b-pagination class="custom-pagination" :total-rows="totalRows" v-model="page" @input="$emit('input', page)">
       </b-pagination>
     </div>
   </div>
@@ -17,12 +17,6 @@ export default {
       default: 1,
     },
     totalRows: Number,
-  },
-  methods: {
-    onUpdate(page) {
-      page = page || 1;
-      this.$emit('update:page', page)
-    },
   },
 };
 </script>

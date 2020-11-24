@@ -18,15 +18,15 @@
         </DangerMaker>
       </b-card-text>
       <div class="d-flex justify-content-between">
-        <b-button @click="onDelete(item)" variant="danger">Delete</b-button>
+        <b-button @click="onDelete()" variant="danger">Delete</b-button>
         <b-button
-          @click="onChange(item)"
+          @click="onChange()"
           v-if="!item.completed"
           variant="primary"
           >Complete</b-button
         >
         <b-button
-          @click="onChange(item)"
+          @click="onChange()"
           v-if="item.completed"
           variant="warning"
           >Uncopmplete</b-button

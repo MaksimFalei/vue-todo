@@ -9,7 +9,7 @@
         </b-button>
       </nav>
       <nav class="navbar navbar-dark bg-dark d-flex justify-content-center">
-        <Filters :status.sync="status" :filters="filters" />
+        <Filters v-model="status" :filters="filters" />
       </nav>
     </header>
     <main class="d-flex row w-100 mx-auto justify-content-center">
@@ -24,7 +24,7 @@
       <NewItem @addItem="onModalOk" />
       <Pagination
       :totalRows="totalRows"
-      :page.sync="currentPage"
+      v-model="currentPage"
       v-if="pagination"
       >
          <b-card-group deck id="items-list">
@@ -32,8 +32,8 @@
           v-for="item in paginatedList"
           :key="item.id"
           :item="item"
-          @delete="onDeleteItem"
-          @changeStatus="onChangeCompleted"
+          @delete="onDeleteItem(item)"
+          @changeStatus="onChangeCompleted(item)"
         />
       </b-card-group>
       </Pagination>
@@ -56,7 +56,7 @@
 </template>
 
 <script>
-import { MESSAGES, FILTER_OPTIONS } from "./constants/constants";
+import { MESSAGES, FILTER_OPTIONS, PER_PAGE } from "./constants/constants";
 import apiCalls from "./API/apiCalls";
 import SearchInput from "./components/SearchInput";
 import CardItem from "./components/CardItem";
@@ -94,7 +94,7 @@ export default {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             setTimeout(() => {
-              this.observeStage = ++this.observeStage;
+              this.observeStage++;
             }, 1000);
           }
         });
@@ -172,7 +172,7 @@ export default {
       return !this.pagination && this.infiniteList.length !== this.filteredList.length;
     },
     infiniteList() {
-      const itemCount = this.observeStage * 12;
+      const itemCount = this.observeStage * PER_PAGE;
       return this.filteredList.filter((item, i) => {
         if (i < itemCount) {
           return item;
@@ -248,7 +248,7 @@ export default {
     });
   },
   watch: {
-    status: function () {
+    status() {
       this.currentPage = 1;
       this.observeStage = 1;
     },
