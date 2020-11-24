@@ -32,3 +32,5 @@ export const FILTER_OPTIONS = {
 };
 
 export const BASE_URL = 'https://jsonplaceholder.typicode.com/todos';
+
+export const PER_PAGE = 12;
